@@ -3,10 +3,10 @@ package com.moss.starter.config;
 import com.moss.starter.propeties.FtpOptionProperties;
 import com.moss.starter.service.MossFtpService;
 import lombok.extern.slf4j.Slf4j;
-import org.apache.commons.net.ftp.FTP;
 import org.apache.commons.net.ftp.FTPClient;
+import org.apache.commons.net.ftp.FTPReply;
+import org.apache.commons.pool2.BasePooledObjectFactory;
 import org.apache.commons.pool2.PooledObject;
-import org.apache.commons.pool2.PooledObjectFactory;
 import org.apache.commons.pool2.impl.DefaultPooledObject;
 import org.apache.commons.pool2.impl.GenericObjectPool;
 import org.apache.commons.pool2.impl.GenericObjectPoolConfig;
@@ -19,13 +19,13 @@ import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 
 import javax.annotation.PreDestroy;
+import java.io.IOException;
 
 /**
- *
+ * @author lwj
  * @Configuration 开启配置
  * @EnableConfigurationProperties(FtpOptionProperties.class) 开启使用映射实体对象
  * @ConditionalOnClass({MossFtpService.class, GenericObjectPool.class, FTPClient.class}) 存在IotFtpService时初始化该配置类
- * @author lwj
  */
 @Slf4j
 @Configuration
@@ -33,7 +33,7 @@ import javax.annotation.PreDestroy;
 @ConditionalOnClass({MossFtpService.class, GenericObjectPool.class, FTPClient.class})
 @ConditionalOnProperty(
         prefix = "moss-ftp",//存在配置前缀
-        name="enabled",
+        name = "enabled",
         havingValue = "true",//开启
         matchIfMissing = true//确实检查
 
@@ -46,8 +46,9 @@ public class FtpConfiguration {
 
     /**
      * 预先加载FTPClient连接到对象池中
-     * @param initialSize   初始化连接数
-     * @param maxIdle   最大空闲连接数
+     *
+     * @param initialSize 初始化连接数
+     * @param maxIdle     最大空闲连接数
      */
     private void preLoadingFtpClient(Integer initialSize, int maxIdle) {
         if (initialSize == null || initialSize <= 0) {
@@ -75,9 +76,9 @@ public class FtpConfiguration {
     /**
      * 根据条件判断不存在ElsService时初始化新bean到SpringIoc
      *
+     * @return
      * @Bean 创建MossFtpService实体bean
      * @ConditionalOnMissingBean(MossFtpService.class) 缺失MossService实体bean时，初始化MossService并添加到Spring容器
-     * @return
      */
     @Bean
     @ConditionalOnMissingBean(MossFtpService.class)
@@ -103,7 +104,7 @@ public class FtpConfiguration {
      * FtpClient对象工厂类
      */
     @Slf4j
-    static class FtpClientPooledObjectFactory implements PooledObjectFactory<FTPClient> {
+    static class FtpClientPooledObjectFactory extends BasePooledObjectFactory<FTPClient> {
         private FtpOptionProperties props;
 
         FtpClientPooledObjectFactory(FtpOptionProperties props) {
@@ -111,64 +112,81 @@ public class FtpConfiguration {
         }
 
         @Override
-        public PooledObject<FTPClient> makeObject() throws Exception {
+        public FTPClient create() throws Exception {
             FTPClient ftpClient = new FTPClient();
+            ftpClient.setControlEncoding(props.getEncoding());
+            ftpClient.setConnectTimeout(props.getConnectTimeout());
             try {
+
                 ftpClient.connect(props.getHost(), props.getPort());
-                ftpClient.login(props.getUsername(), props.getPassword());
-                log.info("连接FTP服务器返回码{}", ftpClient.getReplyCode());
-                ftpClient.setBufferSize(props.getBufferSize());
-                ftpClient.setFileType(FTP.BINARY_FILE_TYPE);
-                ftpClient.enterLocalPassiveMode();
-                return new DefaultPooledObject<>(ftpClient);
-            } catch (Exception e) {
-                log.error("建立FTP连接失败", e);
-                if (ftpClient.isAvailable()) {
+                int replyCode = ftpClient.getReplyCode();
+                if (!FTPReply.isPositiveCompletion(replyCode)) {
                     ftpClient.disconnect();
+                    log.warn("FTPServer refused connection,replyCode:{}", replyCode);
+                    return null;
                 }
-                ftpClient = null;
+
+                if (!ftpClient.login(props.getUsername(), props.getPassword())) {
+                    log.warn("ftpClient login failed... username is {}; password: {}", props.getUsername(), props.getPassword());
+                }
+
+                ftpClient.setBufferSize(props.getBufferSize());
+                ftpClient.setFileType(props.getTransferFileType());
+                if (props.isPassiveMode()) {
+                    ftpClient.enterLocalPassiveMode();
+                }
+
+            } catch (IOException e) {
+                log.error("create ftp connection failed...", e);
                 throw new Exception("建立FTP连接失败", e);
             }
+            return ftpClient;
         }
 
+        /**
+         * 用PooledObject封装对象放入池中
+         */
         @Override
-        public void destroyObject(PooledObject<FTPClient> pooledObject) throws Exception {
-            FTPClient ftpClient = getObject(pooledObject);
-            if (ftpClient != null && ftpClient.isConnected()) {
-                ftpClient.disconnect();
-            }
+        public PooledObject<FTPClient> wrap(FTPClient ftpClient) {
+            return new DefaultPooledObject<>(ftpClient);
         }
 
+        /**
+         * 销毁FtpClient对象
+         */
         @Override
-        public boolean validateObject(PooledObject<FTPClient> pooledObject) {
-            FTPClient ftpClient = getObject(pooledObject);
-            if (ftpClient == null || !ftpClient.isConnected()) {
-                return false;
+        public void destroyObject(PooledObject<FTPClient> ftpPooled) {
+            if (ftpPooled == null) {
+                return;
             }
+            FTPClient ftpClient = ftpPooled.getObject();
             try {
-                ftpClient.changeWorkingDirectory("/");
-                return true;
-            } catch (Exception e) {
-                log.error("验证FTP连接失败::{}", e.getMessage());
-                return false;
+                if (ftpClient.isConnected()) {
+                    ftpClient.logout();
+                }
+            } catch (IOException io) {
+                log.error("ftp client logout failed...{}", io);
+            } finally {
+                try {
+                    ftpClient.disconnect();
+                } catch (IOException io) {
+                    log.error("close ftp client failed...{}", io);
+                }
             }
         }
 
+        /**
+         * 验证FtpClient对象
+         */
         @Override
-        public void activateObject(PooledObject<FTPClient> pooledObject) throws Exception {
-
-        }
-
-        @Override
-        public void passivateObject(PooledObject<FTPClient> pooledObject) throws Exception {
-
-        }
-
-        private FTPClient getObject(PooledObject<FTPClient> pooledObject) {
-            if (pooledObject == null || pooledObject.getObject() == null) {
-                return null;
+        public boolean validateObject(PooledObject<FTPClient> ftpPooled) {
+            try {
+                FTPClient ftpClient = ftpPooled.getObject();
+                return ftpClient.sendNoOp();
+            } catch (IOException e) {
+                log.error("Failed to validate client: {}", e);
             }
-            return pooledObject.getObject();
+            return false;
         }
     }
 }
