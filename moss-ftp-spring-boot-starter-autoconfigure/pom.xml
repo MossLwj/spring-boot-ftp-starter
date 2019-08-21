@@ -10,7 +10,7 @@
 	</parent>
 	<groupId>com.moss.starter</groupId>
 	<artifactId>moss-ftp-spring-boot-starter-autoconfigure</artifactId>
-	<version>1.0.1-RELEASE</version>
+	<version>1.0.0-RELEASE</version>
 	<name>moss-ftp-spring-boot-starter-autoconfigure</name>
 	<description>Ftp Tool for Spring Boot</description>
 

@@ -17,6 +17,7 @@ import org.springframework.util.Assert;
 import javax.servlet.http.HttpServletResponse;
 import java.io.*;
 import java.net.URLEncoder;
+import java.nio.charset.Charset;
 import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
 import java.util.Arrays;
@@ -173,34 +174,38 @@ public class MossFtpService {
         InputStream inputStream = null;
         FTPClient ftpClient = ftpClientPool.borrowObject();
         ByteArrayOutputStream baos = new ByteArrayOutputStream();
-        try (OutputStream os = response.getOutputStream()) {
-            log.info("-----------------------开始下载[" + fileName + "]文件！------------------------");
-            inputStream = ftpClient.retrieveFileStream(ftpPath);
-            log.info("------------------reply-------------{}", ftpClient.getReply());
-            //写流文件
-            byte[] buffer = new byte[4096];
-            while ((len = inputStream.read(buffer)) != -1) {
-                baos.write(buffer, 0, len);
-            }
-            //写response
-            if (response != null) {
+        if (response != null) {
+            try (OutputStream os = response.getOutputStream()) {
+                log.info("-----------------------开始下载[" + fileName + "]文件！------------------------");
+                inputStream = ftpClient.retrieveFileStream(ftpPath);
+                log.info("------------------reply-------------{}", ftpClient.getReply());
+                //写流文件
+                byte[] buffer = new byte[4096];
+                while ((len = inputStream.read(buffer)) != -1) {
+                    baos.write(buffer, 0, len);
+                }
+                //写response
                 response.setContentType("application/OCTET-STREAM;charset=utf-8");
                 response.setContentLength(baos.size());
                 response.setHeader("Content-Disposition", "attachment;filename=\"" + URLEncoder.encode(fileName, "UTF-8").replace("+", "%20") + "\"");
+                baos.writeTo(os);
+                os.flush();
+            } catch (Exception e) {
+                flag = false;
+                log.error("-----------------------下载文件[" + fileName + "]失败！错误原因{}-----------------------", e.getMessage());
+                e.printStackTrace();
+            } finally {
+                IOUtils.closeQuietly(inputStream);
+                IOUtils.closeQuietly(baos);
+                releaseFtpClient(ftpClient);
             }
-            baos.writeTo(os);
-            os.flush();
-        } catch (Exception e) {
+        } else {
             flag = false;
-            log.error("-----------------------下载文件[" + fileName + "]失败！错误原因{}-----------------------", e.getMessage());
-            e.printStackTrace();
-        } finally {
-            IOUtils.closeQuietly(inputStream);
-            IOUtils.closeQuietly(baos);
-            releaseFtpClient(ftpClient);
         }
         if (flag) {
             log.info("-----------------------下载文件[" + fileName + "]成功！-----------------------");
+        } else {
+            log.error("-----------------------下载文件[" + fileName + "]失败！错误原因{}-----------------------", "response is null");
         }
         return flag;
     }
@@ -285,7 +290,7 @@ public class MossFtpService {
     public List<String> readFileByLine(String remoteFilePath) throws IOException {
         FTPClient ftpClient = getFtpClient();
         try (InputStream in = ftpClient.retrieveFileStream(encodingPath(remoteFilePath));
-             BufferedReader br = new BufferedReader(new InputStreamReader(in))) {
+             BufferedReader br = new BufferedReader(new InputStreamReader(in, StandardCharsets.UTF_8))) {
             return br.lines().map(StrUtil::trimToEmpty)
                     .filter(StrUtil::isNotEmpty).collect(Collectors.toList());
         } finally {
@@ -396,7 +401,7 @@ public class MossFtpService {
             StringBuilder paths = new StringBuilder();
             do {
                 String subDirectory = new String(remote.substring(start, end).getBytes(StandardCharsets.UTF_8), StandardCharsets.ISO_8859_1);
-                path = path = "/" + subDirectory;
+                path = "/" + subDirectory;
                 if (!existFile(path, ftpClient)) {
                     if (makeDirectory(subDirectory, ftpClient)) {
                         changeWorkingDirectory(subDirectory, ftpClient);
