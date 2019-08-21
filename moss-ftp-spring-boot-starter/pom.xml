@@ -5,7 +5,7 @@
 
 	<groupId>com.moss.starter</groupId>
 	<artifactId>moss-ftp-spring-boot-starter</artifactId>
-	<version>0.0.1-SNAPSHOT</version>
+	<version>1.0.1-RELEASE</version>
 	<name>moss-ftp-spring-boot-starter</name>
 	<description>Demo project for Spring Boot</description>
 
@@ -17,44 +17,44 @@
 		<dependency>
 			<groupId>com.moss.starter</groupId>
 			<artifactId>moss-ftp-spring-boot-starter-autoconfigure</artifactId>
-			<version>0.0.1-SNAPSHOT</version>
+			<version>1.0.1-RELEASE</version>
 		</dependency>
 	</dependencies>
 
-	<!--打包到maven仓库-->
-	<repositories>
-		<repository>
-			<id>nexus</id>
-			<name>192.168.2.66 private nexus</name>
-			<url>http://192.168.2.66:8081/repository/maven-public/</url>
-			<releases>
-				<enabled>true</enabled>
-			</releases>
-			<snapshots>
-				<enabled>true</enabled>
-			</snapshots>
-		</repository>
-	</repositories>
+<!--	&lt;!&ndash;打包到maven仓库&ndash;&gt;-->
+<!--	<repositories>-->
+<!--		<repository>-->
+<!--			<id>nexus</id>-->
+<!--			<name>192.168.2.66 private nexus</name>-->
+<!--			<url>http://192.168.2.66:8081/repository/maven-public/</url>-->
+<!--			<releases>-->
+<!--				<enabled>true</enabled>-->
+<!--			</releases>-->
+<!--			<snapshots>-->
+<!--				<enabled>true</enabled>-->
+<!--			</snapshots>-->
+<!--		</repository>-->
+<!--	</repositories>-->
 
-	<pluginRepositories>
-		<pluginRepository>
-			<id>nexus</id>
-			<name>local private nexus</name>
-			<url>http://192.168.2.66:8081/repository/maven-public/</url>
-			<releases>
-				<enabled>true</enabled>
-			</releases>
-			<snapshots>
-				<enabled>true</enabled>
-			</snapshots>
-		</pluginRepository>
-	</pluginRepositories>
+<!--	<pluginRepositories>-->
+<!--		<pluginRepository>-->
+<!--			<id>nexus</id>-->
+<!--			<name>local private nexus</name>-->
+<!--			<url>http://192.168.2.66:8081/repository/maven-public/</url>-->
+<!--			<releases>-->
+<!--				<enabled>true</enabled>-->
+<!--			</releases>-->
+<!--			<snapshots>-->
+<!--				<enabled>true</enabled>-->
+<!--			</snapshots>-->
+<!--		</pluginRepository>-->
+<!--	</pluginRepositories>-->
 
 	<distributionManagement>
 		<repository>
 			<id>maven-releases</id>
 			<name>Releases</name>
-			<url>http://192.168.2.66:8081/repository/maven-releases/</url>
+			<url>http://192.168.2.66:8081/repository/maven-release/</url>
 		</repository>
 		<snapshotRepository>
 			<id>maven-snapshots</id>
