@@ -17,7 +17,6 @@ import org.springframework.util.Assert;
 import javax.servlet.http.HttpServletResponse;
 import java.io.*;
 import java.net.URLEncoder;
-import java.nio.charset.Charset;
 import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
 import java.util.Arrays;
@@ -64,8 +63,9 @@ public class MossFtpService {
     public boolean uploadFile(String pathname, String fileName, String originFileName) {
         boolean flag;
         InputStream inputStream;
-        FTPClient ftpClient = getFtpClient();
+        FTPClient ftpClient = null;
         try {
+            ftpClient = getFtpClient();
             log.info("-----------------------开始上传[" + fileName + "]文件！------------------------");
             inputStream = new FileInputStream(new File(originFileName));
             // 设置传输的文件类型(BINARY_FILE_TYPE：二进制文件类型 ASCII_FILE_TYPE：ASCII传输方式，这是默认的方式)
@@ -97,8 +97,9 @@ public class MossFtpService {
      */
     public boolean uploadFile(String pathname, String fileName, InputStream inputStream) {
         boolean flag;
-        FTPClient ftpClient = getFtpClient();
+        FTPClient ftpClient = null;
         try {
+            ftpClient = getFtpClient();
             log.info("-----------------------开始上传[" + fileName + "]文件！------------------------");
             ftpClient.setFileType(FTP.BINARY_FILE_TYPE);
             createDirectory(pathname, ftpClient);
@@ -106,7 +107,7 @@ public class MossFtpService {
             ftpClient.changeWorkingDirectory(pathname);
             flag = ftpClient.storeFile(encodingFileName(fileName), inputStream);
             inputStream.close();
-        } catch (IOException e) {
+        } catch (Exception e) {
             flag = false;
             log.info("-----------------------上传文件[" + fileName + "]失败！错误原因{}-----------------------", e.getMessage());
             e.printStackTrace();
@@ -131,8 +132,9 @@ public class MossFtpService {
     public boolean downLoadFile(String pathname, String fileName, String localPath) {
         boolean flag = true;
         OutputStream os = null;
-        FTPClient ftpClient = getFtpClient();
+        FTPClient ftpClient = null;
         try {
+            ftpClient = getFtpClient();
             log.info("-----------------------开始下载[" + fileName + "]文件！------------------------");
             ftpClient.changeWorkingDirectory(pathname);
             FTPFile[] ftpFiles = ftpClient.listFiles();
@@ -262,8 +264,9 @@ public class MossFtpService {
      */
     public boolean deleteFile(String pathName, String fileName) {
         boolean flag = false;
-        FTPClient ftpClient = getFtpClient();
+        FTPClient ftpClient = null;
         try {
+            ftpClient = getFtpClient();
             log.info("-----------------------开始删除[" + fileName + "]文件！------------------------");
             //  切换FTP目录
             ftpClient.changeWorkingDirectory(pathName);
@@ -306,7 +309,7 @@ public class MossFtpService {
      * @return FTPFile数组
      * @throws IOException
      */
-    public FTPFile[] retrieveFTPFiles(String remotePath) throws IOException {
+    public FTPFile[] retrieveFtpFiles(String remotePath) throws IOException {
         FTPClient ftpClient = getFtpClient();
         try {
             return ftpClient.listFiles(encodingPath(remotePath + "/"), file -> file != null && file.getSize() > 0);
@@ -323,7 +326,7 @@ public class MossFtpService {
      * @throws IOException
      */
     public List<String> retrieveFileNames(String remotePath) throws IOException {
-        FTPFile[] ftpFiles = retrieveFTPFiles(remotePath);
+        FTPFile[] ftpFiles = retrieveFtpFiles(remotePath);
         if (ArrayUtil.isEmpty(ftpFiles)) {
             return new ArrayList<>();
         }
@@ -428,7 +431,7 @@ public class MossFtpService {
      * @param ftpClient 当前获取到的ftpClient
      * @return
      */
-    public boolean makeDirectory(String dir, FTPClient ftpClient) {
+    private boolean makeDirectory(String dir, FTPClient ftpClient) {
         boolean flag = true;
         try {
             flag = ftpClient.makeDirectory(dir);
@@ -450,7 +453,7 @@ public class MossFtpService {
      * @param ftpClient 当前获取到的ftpClient
      * @return
      */
-    public boolean existFile(String path, FTPClient ftpClient) throws IOException {
+    private boolean existFile(String path, FTPClient ftpClient) throws IOException {
         boolean flag = false;
         FTPFile[] ftpFileArr = ftpClient.listFiles(path);
         if (ftpFileArr.length > 0) {
@@ -498,7 +501,7 @@ public class MossFtpService {
      * @param ftpClient
      * @return
      */
-    public boolean changeWorkingDirectory(String directory, FTPClient ftpClient) {
+    private boolean changeWorkingDirectory(String directory, FTPClient ftpClient) {
         boolean flag = true;
         try {
             flag = ftpClient.changeWorkingDirectory(directory);

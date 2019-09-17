@@ -165,12 +165,12 @@ public class FtpConfiguration {
                     ftpClient.logout();
                 }
             } catch (IOException io) {
-                log.error("ftp client logout failed...{}", io);
+                log.error("ftp client logout failed...{0}", io);
             } finally {
                 try {
                     ftpClient.disconnect();
                 } catch (IOException io) {
-                    log.error("close ftp client failed...{}", io);
+                    log.error("close ftp client failed...{0}", io);
                 }
             }
         }
@@ -184,7 +184,7 @@ public class FtpConfiguration {
                 FTPClient ftpClient = ftpPooled.getObject();
                 return ftpClient.sendNoOp();
             } catch (IOException e) {
-                log.error("Failed to validate client: {}", e);
+                log.error("Failed to validate client: {0}", e);
             }
             return false;
         }
