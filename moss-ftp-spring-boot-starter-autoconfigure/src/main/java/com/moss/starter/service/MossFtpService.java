@@ -180,7 +180,9 @@ public class MossFtpService {
             try (OutputStream os = response.getOutputStream()) {
                 log.info("-----------------------开始下载[" + fileName + "]文件！------------------------");
                 inputStream = ftpClient.retrieveFileStream(ftpPath);
-                log.info("------------------reply-------------{}", ftpClient.getReply());
+//                inputStream.close();
+//                ftpClient.completePendingCommand();
+
                 //写流文件
                 byte[] buffer = new byte[4096];
                 while ((len = inputStream.read(buffer)) != -1) {
@@ -192,6 +194,7 @@ public class MossFtpService {
                 response.setHeader("Content-Disposition", "attachment;filename=\"" + URLEncoder.encode(fileName, "UTF-8").replace("+", "%20") + "\"");
                 baos.writeTo(os);
                 os.flush();
+                log.info("------------------reply-------------{}", ftpClient.getReply());
             } catch (Exception e) {
                 flag = false;
                 log.error("-----------------------下载文件[" + fileName + "]失败！错误原因{}-----------------------", e.getMessage());
