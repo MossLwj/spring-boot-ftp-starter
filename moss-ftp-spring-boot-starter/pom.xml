@@ -21,7 +21,7 @@
 		</dependency>
 	</dependencies>
 
-<!--	&lt;!&ndash;打包到maven仓库&ndash;&gt;-->
+<!--	&lt;!&ndash;打包到maven仓库，此为项目中的内容&ndash;&gt;-->
 <!--	<repositories>-->
 <!--		<repository>-->
 <!--			<id>nexus</id>-->
