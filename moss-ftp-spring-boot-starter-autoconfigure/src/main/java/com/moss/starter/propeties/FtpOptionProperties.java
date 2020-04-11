@@ -43,4 +43,7 @@ public class FtpOptionProperties {
     private Integer transferFileType = FTP.BINARY_FILE_TYPE;
     /** 被动模式 **/
     private boolean passiveMode = true;
+    /** Linux环境下的ftp文件夹路径 **/
+    private String ftpPath;
+
 }

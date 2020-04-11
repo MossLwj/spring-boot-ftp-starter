@@ -2,6 +2,7 @@ package com.moss.starter.config;
 
 import com.moss.starter.propeties.FtpOptionProperties;
 import com.moss.starter.service.MossFtpService;
+import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.commons.net.ftp.FTPClient;
 import org.apache.commons.net.ftp.FTPReply;
@@ -36,13 +37,11 @@ import java.io.IOException;
         name = "enabled",
         havingValue = "true",//开启
         matchIfMissing = true//确实检查
-
 )
+@RequiredArgsConstructor(onConstructor = @__(@Autowired))
 public class FtpConfiguration {
-    @Autowired
-    private FtpOptionProperties ftpOptionProperties;
-
-    private GenericObjectPool pool;
+    private final FtpOptionProperties ftpOptionProperties;
+    private GenericObjectPool<FTPClient> pool;
 
     /**
      * 预先加载FTPClient连接到对象池中
@@ -84,7 +83,7 @@ public class FtpConfiguration {
     @ConditionalOnMissingBean(MossFtpService.class)
     public MossFtpService mossFtpService() {
         log.info("---------------->>>The MossFtpService Not Found, Execute Creat New Bean.----------------------");
-        GenericObjectPoolConfig poolConfig = new GenericObjectPoolConfig();
+        GenericObjectPoolConfig<FTPClient> poolConfig = new GenericObjectPoolConfig<>();
         poolConfig.setTestOnBorrow(true);
         poolConfig.setTestOnReturn(true);
         poolConfig.setTestWhileIdle(true);
@@ -114,7 +113,6 @@ public class FtpConfiguration {
         @Override
         public FTPClient create() throws Exception {
             FTPClient ftpClient = new FTPClient();
-            ftpClient.setControlEncoding(props.getEncoding());
             ftpClient.setConnectTimeout(props.getConnectTimeout());
             try {
 
@@ -129,16 +127,16 @@ public class FtpConfiguration {
                 if (!ftpClient.login(props.getUsername(), props.getPassword())) {
                     log.warn("ftpClient login failed... username is {}; password: {}", props.getUsername(), props.getPassword());
                 }
-
                 ftpClient.setBufferSize(props.getBufferSize());
                 ftpClient.setFileType(props.getTransferFileType());
+                ftpClient.setControlEncoding(props.getEncoding());
                 if (props.isPassiveMode()) {
                     ftpClient.enterLocalPassiveMode();
                 }
-
+                ftpClient.setSoTimeout(props.getConnectTimeout());
             } catch (IOException e) {
                 log.error("create ftp connection failed...", e);
-                throw new Exception("建立FTP连接失败", e);
+                throw new Exception("FtpClient 创建失败", e);
             }
             return ftpClient;
         }

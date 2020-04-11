@@ -6,7 +6,7 @@ import lombok.Data;
  * @author lwj
  */
 @Data
-public class FtpFileDTO {
+public class FtpFileDto {
 
     /** 附件ftp路径 */
     private String path;
