@@ -44,6 +44,10 @@ public class FtpOptionProperties {
     /** 被动模式 **/
     private boolean passiveMode = true;
     /** Linux环境下的ftp文件夹路径 **/
-    private String ftpPath;
+    private String bucketName;
+    /** 上传文件夹配置 **/
+    private DirProperties dir = new DirProperties();
+    /** ftp服务所在的操作系统类型(LINUX;WINDOWS) **/
+    private String ftpServerSystem;
 
 }
