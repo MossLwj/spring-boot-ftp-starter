@@ -13,7 +13,6 @@ import org.apache.commons.pool2.impl.GenericObjectPool;
 import org.apache.tomcat.util.http.fileupload.IOUtils;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.util.Assert;
-import org.springframework.util.StringUtils;
 
 import javax.servlet.http.HttpServletResponse;
 import java.io.*;
@@ -171,21 +170,23 @@ public class MossFtpService {
      * @return 文件流
      */
     public InputStream downLoadFileToStream(String pathName, String fileName) throws Exception {
-        InputStream inputStream = null;
         FTPClient ftpClient = ftpClientPool.borrowObject();
-        try {
+        InputStream stream1 = null;
+        try (InputStream inputStream = ftpClient.retrieveFileStream(pathName);) {
             log.info("-----------------------开始下载[" + fileName + "]文件！------------------------");
             ftpClient.enterLocalPassiveMode();
-            inputStream = ftpClient.retrieveFileStream(pathName);
+            ByteArrayOutputStream baos = cloneInputStream(inputStream);
+            stream1 = new ByteArrayInputStream(baos.toByteArray());
             log.info("------------------reply-------------{}", ftpClient.getReplyCode());
         } catch (Exception e) {
             log.error("-----------------------获取文件流[" + fileName + "]失败！错误原因{}-----------------------", e.getMessage());
             e.printStackTrace();
         } finally {
+            ftpClient.completePendingCommand();
 //            IOUtils.closeQuietly(inputStream);
             releaseFtpClient(ftpClient);
         }
-        return inputStream;
+        return stream1;
     }
 
     /**
@@ -552,6 +553,22 @@ public class MossFtpService {
             ioe.printStackTrace();
         }
         return flag;
+    }
+
+    private static ByteArrayOutputStream cloneInputStream(InputStream input) {
+        try {
+            ByteArrayOutputStream baos = new ByteArrayOutputStream();
+            byte[] buffer = new byte[1024];
+            int len;
+            while ((len = input.read(buffer)) > -1) {
+                baos.write(buffer, 0, len);
+            }
+            baos.flush();
+            return baos;
+        } catch (IOException e) {
+            e.printStackTrace();
+            return null;
+        }
     }
 
 }
