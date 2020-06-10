@@ -301,8 +301,10 @@ public class MossFtpService {
             log.info("-----------------------开始删除[" + fileName + "]文件！------------------------");
             //  切换FTP目录
             ftpClient.changeWorkingDirectory(pathName);
-            ftpClient.deleteFile(encodingFileName(fileName));
-            ftpClient.logout();
+            boolean delFlag = ftpClient.deleteFile(encodingFileName(fileName));
+            if (!delFlag) {
+                log.info("【文件删除】删除文件失败，文件名={}", fileName);
+            }
             flag = true;
             log.info("-----------------------删除文件[" + fileName + "]成功！------------------------");
         } catch (Exception e) {
