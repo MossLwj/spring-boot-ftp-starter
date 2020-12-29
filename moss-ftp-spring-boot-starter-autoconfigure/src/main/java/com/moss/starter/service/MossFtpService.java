@@ -299,8 +299,9 @@ public class MossFtpService {
         try {
             ftpClient = getFtpClient();
             log.info("-----------------------开始删除[" + fileName + "]文件！------------------------");
-            //  切换FTP目录
+            //  切换到文件在FTP服务器上的目录
             ftpClient.changeWorkingDirectory(pathName);
+            //  通过文件名删除文件
             boolean delFlag = ftpClient.deleteFile(encodingFileName(fileName));
             if (!delFlag) {
                 log.info("【文件删除】删除文件失败，文件名={}", fileName);
@@ -320,7 +321,7 @@ public class MossFtpService {
      * 按行读取FTP文件
      *
      * @param remoteFilePath 文件路径（path+fileName）
-     * @return
+     * @return 文件名列表
      * @throws IOException
      */
     public List<String> readFileByLine(String remoteFilePath) throws IOException {
@@ -557,6 +558,12 @@ public class MossFtpService {
         return flag;
     }
 
+    /**
+     * 关闭文件流
+     *
+     * @param input 文件流
+     * @return
+     */
     private static ByteArrayOutputStream cloneInputStream(InputStream input) {
         try {
             ByteArrayOutputStream baos = new ByteArrayOutputStream();
