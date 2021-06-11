@@ -1,0 +1,19 @@
+# ftp配置
+moss-ftp:
+  isOpen: true
+  host: 192.168.2.66
+  port: 21
+  username: moss
+  password: 123456
+  encoding: UTF-8
+  buffer-size: 20480
+  # 如果新增的用户对应的ftp家目录不能对应到的话，需要指定ftp家目录的地址。
+  bucketName: /usr/docker/vsftpd/moss
+  # ftp服务宿主机的类型
+  ftpServerSystem: Linux
+  dir:
+    # 定义上传的前缀
+    prefix: dris_dev_file
+    preview: dris_dev_pdf
+
+
