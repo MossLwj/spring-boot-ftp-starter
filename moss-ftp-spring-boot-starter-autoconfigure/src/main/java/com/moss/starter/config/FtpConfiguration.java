@@ -33,7 +33,7 @@ import java.io.IOException;
 @EnableConfigurationProperties(FtpOptionProperties.class)
 @ConditionalOnClass({MossFtpService.class, GenericObjectPool.class, FTPClient.class})
 @ConditionalOnProperty(
-        prefix = "moss-ftp",//存在配置前缀
+        prefix = "moss.ftp",//存在配置前缀
         name = "enabled",
         havingValue = "true",//开启
         matchIfMissing = true//确实检查

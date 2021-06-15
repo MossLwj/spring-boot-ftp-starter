@@ -57,7 +57,7 @@ public class MossFtpService {
      * @param pathName       ftp服务保存地址
      * @param fileName       上传到ftp的文件名
      * @param originFileName 待上传文件的名称（绝对地址）
-     * @return
+     * @return true：成功；false：失败
      */
     public boolean uploadFile(String pathName, String fileName, String originFileName) {
         boolean flag;
@@ -92,7 +92,7 @@ public class MossFtpService {
      * @param pathName    ftp服务保存地址
      * @param fileName    上传到ftp的文件名
      * @param inputStream 输入文件流
-     * @return
+     * @return true：成功；false：失败
      */
     public boolean uploadFile(String pathName, String fileName, InputStream inputStream) {
         boolean flag;
@@ -126,7 +126,7 @@ public class MossFtpService {
      * @param pathName  FTP服务器文件目录
      * @param fileName  文件名称
      * @param localPath 下载后的文件路径
-     * @return
+     * @return true：成功；false：失败
      */
     public boolean downLoadFile(String pathName, String fileName, String localPath) {
         boolean flag = true;
@@ -194,7 +194,7 @@ public class MossFtpService {
      *
      * @param pathName FTP服务器文件的相对地址
      * @param fileName 文件真实名称
-     * @return
+     * @return true：成功；false：失败
      */
     public boolean downLoadFileToResponse(String pathName, String fileName) throws Exception {
         boolean flag = true;
@@ -206,6 +206,7 @@ public class MossFtpService {
                 log.info("-----------------------开始下载[" + fileName + "]文件！------------------------");
                 ftpClient.enterLocalPassiveMode();
                 inputStream = ftpClient.retrieveFileStream(pathName);
+                //  为了返回文件流到http响应中，此处不能关闭文件流
 //                inputStream.close();
 //                ftpClient.completePendingCommand();
 
@@ -248,7 +249,7 @@ public class MossFtpService {
      *
      * @param fileDtoS 需要打包的一组文件
      * @param zipName  zip打包的真实名称
-     * @return
+     * @return true：成功；false：失败
      */
     public boolean downLoadFileByZipToResponse(List<FtpFileDto> fileDtoS, String zipName) {
         boolean flag = true;
@@ -269,7 +270,6 @@ public class MossFtpService {
                 } catch (Exception ex) {
                     log.error("-----------------------下载文件[" + ftpFileDto.getFileName() + "]失败！错误原因{}-----------------------", ex.getMessage());
                 }
-
             }
             zipOutputStream.flush();
             response.flushBuffer();
@@ -289,24 +289,28 @@ public class MossFtpService {
     /**
      * 删除文件
      *
-     * @param pathName
-     * @param fileName
-     * @return
+     * @param path     文件路径 /dris/20210611/2b013e3b-cc68-474d-8dc4-1d4163308f9e.jpg
+     * @param fileName 文件名 avator.jpg
+     * @return true：成功；false：失败
      */
-    public boolean deleteFile(String pathName, String fileName) {
+    public boolean deleteFile(String path, String fileName) {
         boolean flag = false;
         FTPClient ftpClient = null;
         try {
             ftpClient = getFtpClient();
             log.info("-----------------------开始删除[" + fileName + "]文件！------------------------");
+            //  从path中截取中间的文件夹路径
+            final String absolutePath = path.trim().substring(0, path.trim().lastIndexOf('/') + 1);
+            //  获取文件的uuid名称
+            final String fileUniqueId = path.trim().substring(path.trim().lastIndexOf('/') + 1);
             //  切换到文件在FTP服务器上的目录
-            ftpClient.changeWorkingDirectory(pathName);
+            ftpClient.changeWorkingDirectory(absolutePath);
             //  通过文件名删除文件
-            boolean delFlag = ftpClient.deleteFile(encodingFileName(fileName));
+            boolean delFlag = ftpClient.deleteFile(encodingFileName(fileUniqueId));
             if (!delFlag) {
                 log.info("【文件删除】删除文件失败，文件名={}", fileName);
             }
-            flag = true;
+            flag = delFlag;
             log.info("-----------------------删除文件[" + fileName + "]成功！------------------------");
         } catch (Exception e) {
             log.error("-----------------------删除文件[" + fileName + "]失败！------------------------");
@@ -322,7 +326,6 @@ public class MossFtpService {
      *
      * @param remoteFilePath 文件路径（path+fileName）
      * @return 文件名列表
-     * @throws IOException
      */
     public List<String> readFileByLine(String remoteFilePath) throws IOException {
         FTPClient ftpClient = getFtpClient();
@@ -341,7 +344,6 @@ public class MossFtpService {
      *
      * @param remotePath 路径
      * @return FTPFile数组
-     * @throws IOException
      */
     public FTPFile[] retrieveFtpFiles(String remotePath) throws IOException {
         FTPClient ftpClient = getFtpClient();
@@ -357,21 +359,21 @@ public class MossFtpService {
      *
      * @param remotePath 路径
      * @return ftp文件名称列表
-     * @throws IOException
      */
     public List<String> retrieveFileNames(String remotePath) throws IOException {
         FTPFile[] ftpFiles = retrieveFtpFiles(remotePath);
         if (ArrayUtil.isEmpty(ftpFiles)) {
             return new ArrayList<>();
         }
-        return Arrays.stream(ftpFiles).filter(Objects::isNull).map(ftpFile -> ftpFile != null ? ftpFile.getName() : null).collect(Collectors.toList());
+        return Arrays.stream(ftpFiles).filter(Objects::isNull)
+                .map(ftpFile -> ftpFile != null ? ftpFile.getName() : null).collect(Collectors.toList());
     }
 
     /**
      * 编码文件路径
      *
      * @param path 文件路径（path+fileName）
-     * @return
+     * @return 编码后的文件路径
      * @throws UnsupportedEncodingException
      */
     private String encodingPath(String path) throws UnsupportedEncodingException {
@@ -383,12 +385,11 @@ public class MossFtpService {
      * 编码附件名称（由于中文名称时会导致上传下载失败）
      *
      * @param fileName 附件名称
-     * @return
+     * @return 编码后的文件名
      */
     private String encodingFileName(String fileName) {
         return new String(fileName.getBytes(StandardCharsets.UTF_8), StandardCharsets.ISO_8859_1);
     }
-
 
     /**
      * 释放ftpClient
@@ -400,14 +401,8 @@ public class MossFtpService {
             return;
         }
         try {
-            boolean flag = true;
-            if (ftpOptionProperties.getFtpServerSystem().toUpperCase().contains("WINDOWS")) {
-                //  若ftp服务部署在Windows系统上
-                flag = this.changeWorkingDirectory("/", ftpClient);
-            } else {
-                //  若ftp服务部署在Linux系统上
-                flag = this.changeWorkingDirectory(ftpOptionProperties.getBucketName(), ftpClient);
-            }
+            //  切换文件地址
+            boolean flag = this.changeWorkingDirectory("/", ftpClient);
             if (!flag) {
                 ftpClient.disconnect();
                 log.info("将FtpClient放回到pool中时，重置FtpClient所在文件夹失败");
@@ -424,7 +419,6 @@ public class MossFtpService {
             }
         }
     }
-
 
     /**
      * 创建多层目录文件，如果有ftp服务器已存在该文件，则不创建，如果无，则创建
@@ -470,7 +464,7 @@ public class MossFtpService {
      *
      * @param dir       目录
      * @param ftpClient 当前获取到的ftpClient
-     * @return
+     * @return true：成功；false：失败
      */
     private boolean makeDirectory(String dir, FTPClient ftpClient) {
         boolean flag = true;
@@ -492,7 +486,7 @@ public class MossFtpService {
      *
      * @param path      文件路径
      * @param ftpClient 当前获取到的ftpClient
-     * @return
+     * @return true：成功；false：失败
      */
     private boolean existFile(String path, FTPClient ftpClient) throws IOException {
         boolean flag = false;
@@ -540,7 +534,7 @@ public class MossFtpService {
      *
      * @param directory 切换的文件夹路径
      * @param ftpClient ftpClient
-     * @return flag
+     * @return true：成功；false：失败
      */
     private boolean changeWorkingDirectory(String directory, FTPClient ftpClient) {
         boolean flag = true;
@@ -562,7 +556,6 @@ public class MossFtpService {
      * 关闭文件流
      *
      * @param input 文件流
-     * @return
      */
     private static ByteArrayOutputStream cloneInputStream(InputStream input) {
         try {
