@@ -177,13 +177,14 @@ public class MossFtpService {
             ftpClient.enterLocalPassiveMode();
             ByteArrayOutputStream baos = cloneInputStream(inputStream);
             stream1 = new ByteArrayInputStream(baos.toByteArray());
+            //  关闭字节流
+            IOUtils.closeQuietly(baos);
             log.info("------------------reply-------------{}", ftpClient.getReplyCode());
         } catch (Exception e) {
             log.error("-----------------------获取文件流[" + fileName + "]失败！错误原因{}-----------------------", e.getMessage());
             e.printStackTrace();
         } finally {
             ftpClient.completePendingCommand();
-//            IOUtils.closeQuietly(inputStream);
             releaseFtpClient(ftpClient);
         }
         return stream1;
