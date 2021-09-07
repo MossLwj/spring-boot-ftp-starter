@@ -179,12 +179,12 @@ public class FtpConfiguration {
         @Override
         public boolean validateObject(PooledObject<FTPClient> ftpPooled) {
             try {
-                FTPClient ftpClient = ftpPooled.getObject();
-                return ftpClient.sendNoOp();
+                ftpPooled.getObject().sendNoOp();
             } catch (IOException e) {
-                log.error("Failed to validate client: {0}", e);
+                log.error("validateObject ftp error!", e);
+                return false;
             }
-            return false;
+            return ftpPooled.getObject().isConnected() && ftpPooled.getObject().isAvailable();
         }
     }
 }
